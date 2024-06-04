@@ -106,7 +106,7 @@ int main( int argc, const char * argv[] )
 	if ( ! theArgs.has_value() )
 	{
 		std::cerr << "Wrong number of arguments.\nUsage:\n\n" <<
-			"SetOpenFolder [--verbose] path-to-folder\n\n" <<
+			"SetDmgOpenFolder [--verbose] path-to-folder\n\n" <<
 			"Make a folder on a read-write disk image automatically\n" <<
 			"open as a Finder window when the image mounts.\n";
 		return 1;
