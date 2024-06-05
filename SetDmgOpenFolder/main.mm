@@ -40,6 +40,8 @@
 #include <string>
 #include <optional>
 #include <utility>
+#include <sys/param.h>
+#include <sys/mount.h>
 
 #include <Foundation/Foundation.h>
 
@@ -99,6 +101,17 @@ GetArgs( int argc, const char * argv[] )
 	return result;
 }
 
+static void ReportFileSystem( const char* rootPath )
+{
+	struct statfs fsbuf;
+	int result = statfs( rootPath, &fsbuf );
+	if (result == 0)
+	{
+		std::cerr << "The file system '" << fsbuf.f_fstypename <<
+			"' may not support this operation.\n";
+	}
+}
+
 
 int main( int argc, const char * argv[] )
 {
@@ -154,6 +167,7 @@ int main( int argc, const char * argv[] )
 	if (result != 0)
 	{
 		std::cerr << "Error " << errno << " getting Finder info.\n";
+		ReportFileSystem( rootPath );
 		return 4;
 	}
 	if (info.length != sizeof(InfoBuf))
@@ -184,6 +198,8 @@ int main( int argc, const char * argv[] )
 	if (result != 0)
 	{
 		std::cerr << "Error " << errno << " setting Finder info.\n";
+		ReportFileSystem( rootPath );
+		
 		return 6;
 	}
 	

@@ -228,6 +228,7 @@
 		BE0AEE542C0FB22C00E0620B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				DSTROOT = /;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -235,6 +236,8 @@
 		BE0AEE552C0FB22C00E0620B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				DEPLOYMENT_LOCATION = YES;
+				DSTROOT = /;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
