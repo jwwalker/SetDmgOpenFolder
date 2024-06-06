@@ -79,37 +79,29 @@ GetArgs( int argc, const char * argv[] )
 	std::optional< PathAndVerboseFlag > result;
 	
 	PathAndVerboseFlag pathAndFlag;
-	if (argc == 2)
+	pathAndFlag.second = false;
+	int argIndex = 1;
+	while (argIndex < argc)
 	{
-		pathAndFlag.second = false;
-		pathAndFlag.first = argv[1];
-		if (pathAndFlag.first != "--verbose")
-		{
-			result = pathAndFlag;
-		}
-	}
-	else if (argc == 3)
-	{
-		if (std::string(argv[1]) == "--verbose")
+		std::string theArg( argv[ argIndex ] );
+		if (theArg == "--verbose")
 		{
 			pathAndFlag.second = true;
-			pathAndFlag.first = argv[2];
-			result = pathAndFlag;
 		}
+		else
+		{
+			pathAndFlag.first = theArg;
+			break;
+		}
+		++argIndex;
+	}
+	
+	if (argIndex == argc - 1)
+	{
+		result = pathAndFlag;
 	}
 	
 	return result;
-}
-
-static void ReportFileSystem( const char* rootPath )
-{
-	struct statfs fsbuf;
-	int result = statfs( rootPath, &fsbuf );
-	if (result == 0)
-	{
-		std::cerr << "The file system '" << fsbuf.f_fstypename <<
-			"' may not support this operation.\n";
-	}
 }
 
 
@@ -136,6 +128,10 @@ int main( int argc, const char * argv[] )
 	const char* rootPath = rootURL.filePathURL.path.UTF8String;
 	
 	// Get iNode number of the folder, and verify that it is a folder.
+	// By the way, I'm told that what I really need is an HFS  catalog node
+	// ID, which might be different from the iNode number in edge cases.  But
+	// I don't know how to get a catalog node ID, and this works well enough.
+	// Reference: https://developer.apple.com/forums/thread/756274
 	struct stat statInfo;
 	int result = stat( path.c_str(), &statInfo );
 	if (result != 0)
@@ -149,6 +145,22 @@ int main( int argc, const char * argv[] )
 		std::cerr << "The path " << path << " is not a directory.\n";
 		return 3;
 	}
+	// Check the file system
+	struct statfs fsbuf;
+	result = statfs( rootPath, &fsbuf );
+	if (result != 0)
+	{
+		std::cerr << "Error " << errno << " getting information about " <<
+			"the file system of " << path << ".\n";
+		return 4;
+	}
+	if (std::string( fsbuf.f_fstypename ) != "hfs")
+	{
+		std::cerr << "The file system '" << fsbuf.f_fstypename <<
+			"' does not support this operation.\n";
+		return 5;
+	}
+
 	if (beVerbose)
 	{
 		std::cout << "iNode number of directory is " << statInfo.st_ino << '\n';
@@ -167,24 +179,22 @@ int main( int argc, const char * argv[] )
 	if (result != 0)
 	{
 		std::cerr << "Error " << errno << " getting Finder info.\n";
-		ReportFileSystem( rootPath );
-		return 4;
+		return 6;
 	}
 	if (info.length != sizeof(InfoBuf))
 	{
 		std::cerr << "Unexpected length " << (info.length - 4) << " of Finder info.\n";
-		return 5;
+		return 7;
 	}
 	if (beVerbose)
 	{
 		std::cout << "Old Finder info: " << info << '\n';
 	}
 		
-	// Stick the inode into the Finder info, as a bigendian 16-bit number.
-	// NOTE: this uses undocumented information about the Finder info that
-	// was deduced by experimentation.
-	uint16_t inodeBE = NSSwapHostShortToBig( (uint16_t) statInfo.st_ino );
-	memcpy( &info.finderInfo[10], &inodeBE, 2 );
+	// Stick the inode into the Finder info, as a bigendian 32-bit number.
+	// NOTE: this uses undocumented information about the Finder info.
+	uint32_t inodeBE = NSSwapHostIntToBig( (uint32_t) statInfo.st_ino );
+	memcpy( &info.finderInfo[8], &inodeBE, sizeof(inodeBE) );
 	if (beVerbose)
 	{
 		std::cout << "New Finder info: " << info << '\n';
@@ -198,9 +208,7 @@ int main( int argc, const char * argv[] )
 	if (result != 0)
 	{
 		std::cerr << "Error " << errno << " setting Finder info.\n";
-		ReportFileSystem( rootPath );
-		
-		return 6;
+		return 8;
 	}
 	
 	std::cout << "Done.\n";
