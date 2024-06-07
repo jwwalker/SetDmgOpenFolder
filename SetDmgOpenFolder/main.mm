@@ -192,7 +192,8 @@ int main( int argc, const char * argv[] )
 	}
 		
 	// Stick the inode into the Finder info, as a bigendian 32-bit number.
-	// NOTE: this uses undocumented information about the Finder info.
+	// See https://developer.apple.com/library/archive/technotes/tn/tn1150.html#VolumeHeader
+	// for documentation on the Finder info in the HFS+ volume format.
 	uint32_t inodeBE = NSSwapHostIntToBig( (uint32_t) statInfo.st_ino );
 	memcpy( &info.finderInfo[8], &inodeBE, sizeof(inodeBE) );
 	if (beVerbose)
